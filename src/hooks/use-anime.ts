@@ -14,22 +14,28 @@ export function useAnime(slug: string) {
     const fetchAnime = async () => {
       try {
         setLoading(true);
+        setError(null); // Clear previous errors
         // Simulate API call delay
         await new Promise(resolve => setTimeout(resolve, 1000));
         
         if (slug === 'jujutsu-kaisen') {
+          console.log('useAnime: Setting mock data for jujutsu-kaisen'); // Added log
           setAnime(mockAnimeData);
           setUserProgress(mockUserProgress);
         } else {
+          console.log('useAnime: Slug not found', { slug }); // Added log
           setError('Anime not found');
         }
       } catch (err) {
+        console.error('useAnime: Error fetching anime', err); // Added error log
         setError('Failed to fetch anime data');
       } finally {
         setLoading(false);
+        console.log('useAnime: Loading set to false'); // Added log
       }
     };
 
+    console.log('useAnime: Running effect for slug:', slug); // Added log
     fetchAnime();
   }, [slug]);
 
