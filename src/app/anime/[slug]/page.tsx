@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const anime = mockAnimeData;
 
   return {
-    title: `${anime.title.english || anime.title.romaji} | AnimeFlux`,
+    title: `${anime.title.english || anime.title.romaji} | FlixOra`,
     description: anime.description.slice(0, 160) + '...',
     openGraph: {
       title: anime.title.english || anime.title.romaji,

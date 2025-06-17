@@ -58,8 +58,8 @@ export function Navbar() {
               whileTap={{ scale: 0.95 }}
             >
               <div className="text-2xl font-bold text-white">
-                <span className="text-red-500">Anime</span>
-                <span className="text-blue-500">Flux</span>
+                <span className="text-sky-500">Flix</span>
+                <span className="text-blue-500">Ora</span>
               </div>
             </motion.div>
 

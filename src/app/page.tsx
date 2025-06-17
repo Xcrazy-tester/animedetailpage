@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { ArrowRightIcon, PlayIcon, SparklesIcon } from '@heroicons/react/24/solid';
+import { ArrowRightIcon, PlayIcon, SparklesIcon, WrenchScrewdriverIcon } from '@heroicons/react/24/solid';
 import { Navbar } from '@/components/ui/navbar';
 import { AuroraBackground } from '@/components/effects/aurora-background';
 
@@ -15,6 +15,10 @@ export default function Home() {
 
   const navigateToAnimeDetail = () => {
     router.push('/anime/jujutsu-kaisen');
+  };
+  
+  const navigateToUIShowcase = () => {
+    router.push('/dev/ui');
   };
 
   return (
@@ -59,7 +63,7 @@ export default function Home() {
             transition={{ duration: 0.8, delay: 0.3, ease: 'easeOut' }}
             className="space-y-6"
           >
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center flex-wrap">
               <motion.button
                 onClick={navigateToDemo}
                 className="neumorphic-button-primary flex items-center gap-3 px-8 py-4 text-lg font-semibold group"
@@ -80,6 +84,16 @@ export default function Home() {
                 <ArrowRightIcon className="h-6 w-6" />
                 Go to Anime Detail
                 <ArrowRightIcon className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
+              </motion.button>
+              
+              <motion.button
+                onClick={navigateToUIShowcase}
+                className="neumorphic-button-secondary flex items-center gap-3 px-6 py-3 text-sm font-semibold group"
+                whileHover={{ scale: 1.05, y: -2 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <WrenchScrewdriverIcon className="h-5 w-5" />
+                UI Showcase
               </motion.button>
               
               <motion.div
