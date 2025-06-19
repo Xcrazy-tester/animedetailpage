@@ -1,0 +1,438 @@
+'use client';
+
+import { useState, useEffect, useRef } from 'react';
+import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
+import { PlayIcon, BookmarkIcon } from '@heroicons/react/24/solid';
+import { BookmarkIcon as BookmarkOutlineIcon } from '@heroicons/react/24/outline';
+import Image from 'next/image';
+import { AnimeDetailType, UserWatchProgress } from '@/types/content.types';
+import { cn } from '@/lib/utils';
+import { AuroraBackground } from '@/components/effects/aurora-background';
+import { Play, Share, Star, Calendar, Monitor } from 'lucide-react';
+import * as Tooltip from '@radix-ui/react-tooltip';
+import { InteractiveGroup } from '@/components/ui/InteractiveGroup';
+import dynamic from 'next/dynamic';
+import Head from 'next/head';
+
+
+// Lazy-load ParticleBackground to reduce initial bundle size
+const LazyParticleBackground = dynamic(
+  () => import('@/components/effects/particle-background').then(mod => mod.ParticleBackground),
+  { ssr: false }
+);
+
+
+interface HeroSectionProps {
+  anime: AnimeDetailType & { tagline?: string; };  // ↘ support optional tagline
+  userProgress?: UserWatchProgress;
+  onBookmarkToggle?: () => void;
+  onPlayClick?: () => void;
+}
+
+
+export function HeroSection({ 
+  anime, 
+  userProgress, 
+  onBookmarkToggle, 
+  onPlayClick 
+}: HeroSectionProps) {
+  const { scrollY } = useScroll();
+  const y = useTransform(scrollY, [0, 500], [0, 150]);
+  const scale = useTransform(scrollY, [0, 300], [1, 1.2]);
+  // Subtle fade for background only
+  const backgroundOpacity = useTransform(scrollY, [0, 500], [1, 0.7]);
+
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [showParticle, setShowParticle] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  // ↘ IntersectionObserver to trigger ParticleBackground only when in view
+  useEffect(() => {
+    const obs = new IntersectionObserver(
+      ([entry]) => entry.isIntersecting && setShowParticle(true),
+      { rootMargin: '200px' }
+    );
+    if (wrapperRef.current) obs.observe(wrapperRef.current);
+    return () => obs.disconnect();
+  }, []);
+
+  const stats = [
+    {
+      label: 'Score',
+      value: anime.rating.toFixed(1),
+      icon: <Star className="h-4 w-4 text-yellow-400" />,
+      tooltip: 'Average user rating',
+    },
+    {
+      label: 'Episodes',
+      value: anime.details.episodeCount.toString(),
+      icon: <Play className="h-4 w-4 text-blue-400" />,
+      tooltip: 'Total episodes released',
+    },
+    {
+      label: 'Studio',
+      value: anime.details.studio,
+      icon: <Monitor className="h-4 w-4 text-purple-400" />,
+      tooltip: 'Production studio',
+    },
+    {
+      label: 'Year',
+      value: anime.releaseYear.toString(),
+      icon: <Calendar className="h-4 w-4 text-green-400" />,
+      tooltip: 'Year of release',
+    },
+  ];
+  
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.2,
+        delayChildren: 0.3,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { y: 30, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: {
+        duration: 0.6,
+        ease: 'easeOut',
+      },
+    },
+  };
+
+  const statItemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: (i: number) => ({
+      opacity: 1,
+      y: 0,
+      transition: {
+        delay: 0.8 + i * 0.1,
+        duration: 0.5,
+        ease: 'easeOut',
+      },
+    }),
+  };
+
+    // Structured data for SEO
+    const jsonLd = {
+      '@context': 'https://schema.org',
+      '@type': 'TVSeries',
+      name: anime.title.english || anime.title.romaji,
+      image: anime.coverImageUrl,
+      description: anime.description,
+      genre: anime.details.genres,
+      datePublished: anime.releaseYear.toString(),
+      
+    };
+
+
+  // Track which button is “active” to keep its glow until click elsewhere
+const [activeButton, setActiveButton] = useState<string | null>(null);
+
+// Clear active glow when clicking anywhere outside a button
+useEffect(() => {
+  const handleDocumentClick = () => setActiveButton(null);
+  document.addEventListener('click', handleDocumentClick);
+  return () => document.removeEventListener('click', handleDocumentClick);
+}, []);
+
+
+
+
+  return (
+    <div className="relative h-screen min-h-[700px] w-full overflow-hidden">
+      
+      {/* Background Effects */}
+      <AuroraBackground 
+        colors={[anime.colorPalette.vibrant, anime.colorPalette.accent, anime.colorPalette.muted]}
+        className="absolute inset-0"
+      />
+      <LazyParticleBackground 
+        config={{
+          count: 30,
+          colors: [anime.colorPalette.vibrant, anime.colorPalette.accent],
+          opacity: { min: 0.1, max: 0.3 }
+        }}
+      />
+
+      {/* Mobile Share Button */}
+      <div className="absolute top-4 right-4 z-20 sm:hidden">
+        <button className="flex items-center justify-center w-10 h-10 rounded-full bg-black/30 backdrop-blur-md border border-white/20 text-white hover:bg-black/50 transition-all duration-300">
+          <Share className="h-5 w-5" />
+        </button>
+      </div>
+
+      {/* Banner Image with Parallax */}
+      <motion.div
+        className="absolute inset-0"
+        style={{ y, scale }}
+      >
+        <div className="relative w-full h-full">
+          <Image
+            src={anime.bannerImageUrl}
+            alt={anime.title.romaji}
+            fill
+            className={cn(
+              "object-cover transition-opacity duration-1000",
+              imageLoaded ? "opacity-100" : "opacity-0"
+            )}
+            onLoad={() => setImageLoaded(true)}
+            priority
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-transparent to-black/60" />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/80" />
+        </div>
+      </motion.div>
+
+      {/* Content */}
+      <motion.div
+          className="relative z-10 flex flex-col-reverse lg:flex-row items-center lg:items-end justify-center min-h-[calc(100vh-4rem)] px-4 sm:px-6 lg:px-8 pb-16"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+      >
+       <div className="w-full max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-center lg:items-end min-h-[calc(100vh-4rem)]">
+     
+            {/* Cover Image */}
+      <motion.div
+        className="lg:col-span-1 w-48 sm:w-64 md:w-72 lg:w-full mx-auto lg:mx-0"
+        variants={itemVariants}
+      >
+        <div className="relative group">
+          <div className="aspect-[3/4] w-full overflow-hidden rounded-2xl shadow-2xl">
+            <Image
+              src={anime.coverImageUrl}
+              alt={anime.title.romaji}
+              fill
+              className="object-cover transition-transform duration-500 group-hover:scale-105 rounded-2xl"
+            />
+            {/* Gradient Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl" />
+          </div>
+        </div>
+      </motion.div>
+
+                  {/* Title and Details */}
+      <div className="lg:col-span-2 space-y-6 text-center lg:text-left">
+        <motion.div className="space-y-4" variants={itemVariants}>
+          <div className="space-y-2">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight max-w-[90vw] mx-auto lg:mx-0">
+              <span className="bg-gradient-to-r from-white via-gray-100 to-gray-300 bg-clip-text text-transparent">
+                {anime.title.english || anime.title.romaji}
+              </span>
+            </h1>
+            {anime.title.english && anime.title.romaji !== anime.title.english && (
+              <p className="text-lg sm:text-xl text-gray-300 font-medium">
+                {anime.title.romaji}
+              </p>
+            )}
+            <p className="text-base sm:text-lg text-gray-400">
+              {anime.title.native}
+            </p>
+          </div>
+
+                {/* Genres */}
+                <div className="flex flex-wrap gap-2 justify-center lg:justify-start">
+                  {anime.details.genres.map((genre) => (
+                    <span
+                      key={genre}
+                      className="px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-sm text-white"
+                    >
+                      {genre}
+                    </span>
+                  ))}
+                </div>
+              </motion.div>
+
+          {/* Stats */}
+          <motion.div
+            className="grid grid-cols-2 md:grid-cols-4 gap-4"
+            variants={itemVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            {stats.map((stat, index) => (
+              <motion.div
+                key={stat.label}
+                className="group relative p-4 rounded-xl bg-white/5 backdrop-blur-md border border-white/10 text-center shadow-sm transition-all duration-300 cursor-pointer hover:shadow-lg hover:bg-white/10"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.8 + index * 0.1 }}
+                whileHover={{
+                  scale: 1.05,
+                  boxShadow: '0 0 20px rgba(255,255,255,0.08)',
+                }}
+                whileTap={{ scale: 0.97 }}
+                role="button"
+                aria-label={`Stat card for ${stat.label}`}
+              >
+                {/* Pulse border on hover */}
+                <motion.div
+                  className="absolute inset-0 rounded-xl border border-yellow-300 opacity-0 group-hover:opacity-20 pointer-events-none"
+                  animate={{ opacity: [0, 0.2, 0] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                />
+
+                {/* Icon with Tooltip */}
+                <Tooltip.Root delayDuration={200}>
+                  <Tooltip.Trigger asChild>
+                    <motion.div
+                      className="flex justify-center mb-2"
+                      whileHover={{ rotate: 6, scale: 1.1 }}
+                      transition={{ type: 'spring', stiffness: 300 }}
+                    >
+                      {stat.icon}
+                    </motion.div>
+                  </Tooltip.Trigger>
+                  <Tooltip.Portal>
+                    <Tooltip.Content
+                      side="top"
+                      align="center"
+                      sideOffset={6}
+                      className="z-50 text-xs px-2 py-1 rounded-md bg-white/10 border border-white/10 text-white backdrop-blur-sm shadow-md"
+                    >
+                      {stat.tooltip}
+                      <Tooltip.Arrow className="fill-white/10" />
+                    </Tooltip.Content>
+                  </Tooltip.Portal>
+                </Tooltip.Root>
+
+                {/* Stat Value */}
+                <motion.div
+                  className="text-base sm:text-lg md:text-xl font-bold text-white group-hover:text-yellow-400 transition-colors"
+                  whileHover={{
+                    scale: 1.05,
+                    textShadow: '0px 0px 12px rgba(255, 255, 150, 0.7)',
+                  }}
+                  transition={{ type: 'tween', ease: 'easeOut', duration: 0.15 }}
+                >
+                  {stat.value}
+                </motion.div>
+
+                {/* Label */}
+                <motion.div
+                  className="text-xs sm:text-sm text-gray-400"
+                  whileHover={{ opacity: 1, color: '#ffffff' }}
+                  transition={{ duration: 0.3 }}
+                >
+                  {stat.label}
+                </motion.div>
+              </motion.div>
+            ))}
+          </motion.div>
+
+{/* Action Buttons */}
+<motion.div
+  className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start"
+  variants={itemVariants}
+>
+  {/* Play Button */}
+  <motion.button
+    onClick={onPlayClick}
+    role="button"
+    aria-label="Play or continue watching"
+    className="neumorphic-button-primary w-full sm:w-auto flex items-center justify-center gap-3 px-6 py-3 text-base sm:text-lg font-semibold transition-shadow duration-300"
+    whileHover={{
+      scale: 1.05,
+      boxShadow: '0 0 12px rgba(59, 130, 246, 0.3)', // soft blue glow
+    }}
+    whileTap={{ scale: 0.97 }}
+    transition={{ type: 'spring', stiffness: 500, damping: 20 }}
+  >
+    <PlayIcon className="h-6 w-6" />
+    {userProgress?.lastWatchedEpisodeId ? 'Continue Watching' : 'Start Watching'}
+  </motion.button>
+
+  {/* Bookmark Button */}
+  <motion.button
+    onClick={onBookmarkToggle}
+    role="button"
+    aria-label={userProgress?.bookmarked ? 'Remove Bookmark' : 'Add to Bookmark'}
+    className={cn(
+      "neumorphic-button-secondary w-full sm:w-auto flex items-center justify-center gap-3 px-6 py-3 text-base sm:text-lg font-semibold transition-shadow duration-300",
+      userProgress?.bookmarked && 'text-yellow-400'
+    )}
+    whileHover={{
+      scale: 1.05,
+      boxShadow: '0 0 12px rgba(234, 179, 8, 0.3)', // soft yellow glow
+    }}
+    whileTap={{ scale: 0.97 }}
+    transition={{ type: 'spring', stiffness: 500, damping: 20 }}
+  >
+    {userProgress?.bookmarked ? (
+      <BookmarkIcon className="h-6 w-6" />
+    ) : (
+      <BookmarkOutlineIcon className="h-6 w-6" />
+    )}
+    {userProgress?.bookmarked ? 'Bookmarked' : 'Add to List'}
+  </motion.button>
+
+  {/* Share Button */}
+  <Tooltip.Root delayDuration={200}>
+    <Tooltip.Trigger asChild>
+      <motion.button
+        role="button"
+        aria-label="Share this anime"
+        className="hidden sm:flex neumorphic-button-secondary w-full sm:w-auto items-center justify-center gap-3 px-6 py-3 text-base sm:text-lg font-semibold transition-shadow duration-300"
+        whileHover={{
+          scale: 1.05,
+          boxShadow: '0 0 12px rgba(255, 255, 255, 0.3)', // subtle white glow
+        }}
+        whileTap={{ scale: 0.97 }}
+        transition={{ type: 'spring', stiffness: 500, damping: 20 }}
+      >
+        <Share className="h-6 w-6" />
+        Share
+      </motion.button>
+    </Tooltip.Trigger>
+    <Tooltip.Portal>
+      <Tooltip.Content
+        side="top"
+        align="center"
+        sideOffset={6}
+        className="z-50 text-xs px-2 py-1 rounded-md bg-white/10 border border-white/10 text-white backdrop-blur-sm shadow-md"
+      >
+        Share this anime
+        <Tooltip.Arrow className="fill-white/10" />
+      </Tooltip.Content>
+    </Tooltip.Portal>
+  </Tooltip.Root>
+</motion.div>
+
+
+            </div>
+          </div>
+        </div>
+      </motion.div>
+
+{/* Scroll Indicator */}
+<motion.div
+  style={{
+    opacity: useTransform(scrollY, [0, 500], [1, 0])
+  }}
+  className="absolute bottom-[8%] left-1/2 transform -translate-x-1/2 hidden sm:block"
+>
+  <motion.div
+    className="w-6 h-10 border-2 border-white/50 rounded-full flex justify-center"
+    animate={{ opacity: [0.5, 1, 0.5] }}
+    transition={{ duration: 2, repeat: Infinity }}
+  >
+    <motion.div
+      className="w-1 h-3 bg-white rounded-full mt-2"
+      animate={{ y: [0, 12, 0] }}
+      transition={{ duration: 2, repeat: Infinity }}
+    />
+  </motion.div>
+</motion.div>
+    </div>
+  );
+}

@@ -2,6 +2,7 @@ import './globals.css';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { ThemeProvider } from '@/components/ui/theme-provider';
+import * as Tooltip from '@radix-ui/react-tooltip'; // ✅ Import Tooltip.Provider
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -24,7 +25,9 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <Tooltip.Provider delayDuration={100}>
+            {children}
+          </Tooltip.Provider>
         </ThemeProvider>
       </body>
     </html>
